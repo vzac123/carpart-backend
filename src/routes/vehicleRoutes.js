@@ -5,6 +5,8 @@ import {
   getVehicles,
   testEndpoint,
   createVehicles,
+  updateVehicle,
+  deleteVehicle,
 } from '../controllers/vehicleController.js';
 import upload from '../middleware/upload.js';
 
@@ -17,5 +19,9 @@ router.get('/test', testEndpoint);
 router.post('/upload', upload.single('excelFile'), uploadExcel);
 router.get('/', getVehicles);
 router.post('/', createVehicles);
+
+router.delete('/:id', deleteVehicle);
+
+router.put('/:id', updateVehicle);
 
 export default router;

@@ -279,6 +279,67 @@ const createVehicles = async (req, res) => {
   }
 };
 
+// ✅ UPDATE - Update vehicle by ID
+const updateVehicle = async (req, res) => {
+  try {
+    const vehicle = await Vehicle.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      {
+        new: true, // Return updated document
+        runValidators: true,
+      }
+    );
+
+    if (!vehicle) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vehicle not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Vehicle updated successfully',
+      data: vehicle,
+    });
+  } catch (error) {
+    console.error('Update vehicle error:', error);
+    res.status(400).json({
+      success: false,
+      message: 'Error updating vehicle',
+      error: error.message,
+    });
+  }
+};
+
+// ✅ DELETE - Delete vehicle by ID
+const deleteVehicle = async (req, res) => {
+  try {
+    const vehicle = await Vehicle.findByIdAndDelete(req.params.id);
+
+    if (!vehicle) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vehicle not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Vehicle deleted successfully',
+      data: vehicle,
+    });
+  } catch (error) {
+    console.error('Delete vehicle error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting vehicle',
+      error: error.message,
+    });
+  }
+};
+
 // Get all vehicles with pagination
 const getVehicles = async (req, res) => {
   try {
@@ -322,4 +383,11 @@ const testEndpoint = async (req, res) => {
   });
 };
 
-export { uploadExcel, getVehicles, testEndpoint, createVehicles };
+export {
+  uploadExcel,
+  getVehicles,
+  testEndpoint,
+  createVehicles,
+  updateVehicle,
+  deleteVehicle,
+};
