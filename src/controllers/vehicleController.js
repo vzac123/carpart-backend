@@ -279,6 +279,60 @@ const createVehicles = async (req, res) => {
   }
 };
 
+// ✅ DELETE ALL - Delete all vehicles from database
+const deleteAllVehicles = async (req, res) => {
+  try {
+    console.log('🗑️ Delete all vehicles endpoint called');
+
+    // Optional: Add a safety check - require confirmation in request body
+    // const { confirm } = req.body;
+
+    // if (confirm !== true) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message:
+    //       'Confirmation required. Send { confirm: true } in request body to delete all vehicles.',
+    //   });
+    // }
+
+    // Get count before deletion for response
+    const totalCount = await Vehicle.countDocuments();
+
+    if (totalCount === 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'No vehicles found to delete',
+        deletedCount: 0,
+      });
+    }
+
+    console.log(
+      `🗑️ Deleting ${totalCount} vehicles from database...`
+    );
+
+    // Delete all vehicles
+    const result = await Vehicle.deleteMany({});
+
+    console.log(
+      `✅ Successfully deleted ${result.deletedCount} vehicles`
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `Successfully deleted all vehicles (${result.deletedCount} records)`,
+      deletedCount: result.deletedCount,
+      previousCount: totalCount,
+    });
+  } catch (error) {
+    console.error('❌ Delete all vehicles error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting all vehicles',
+      error: error.message,
+    });
+  }
+};
+
 // ✅ UPDATE - Update vehicle by ID
 const updateVehicle = async (req, res) => {
   try {
@@ -390,4 +444,5 @@ export {
   createVehicles,
   updateVehicle,
   deleteVehicle,
+  deleteAllVehicles,
 };

@@ -7,6 +7,7 @@ import {
   createVehicles,
   updateVehicle,
   deleteVehicle,
+  deleteAllVehicles,
 } from '../controllers/vehicleController.js';
 import upload from '../middleware/upload.js';
 
@@ -23,5 +24,7 @@ router.post('/', createVehicles);
 router.delete('/:id', deleteVehicle);
 
 router.put('/:id', updateVehicle);
+
+router.delete('/', deleteAllVehicles);
 
 export default router;
