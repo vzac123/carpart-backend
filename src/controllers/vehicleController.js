@@ -394,6 +394,49 @@ const deleteVehicle = async (req, res) => {
   }
 };
 
+// ✅ GET BY ID - Get single vehicle by ID
+const getVehicleById = async (req, res) => {
+  try {
+    console.log(
+      '🔍 Get vehicle by ID endpoint called:',
+      req.params.id
+    );
+
+    const vehicle = await Vehicle.findById(req.params.id);
+
+    if (!vehicle) {
+      console.log('❌ Vehicle not found:', req.params.id);
+      return res.status(404).json({
+        success: false,
+        message: 'Vehicle not found',
+      });
+    }
+
+    console.log('✅ Vehicle found:', vehicle._id);
+    res.status(200).json({
+      success: true,
+      message: 'Vehicle retrieved successfully',
+      data: vehicle,
+    });
+  } catch (error) {
+    console.error('❌ Get vehicle by ID error:', error);
+
+    // Handle invalid ObjectId format
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid vehicle ID format',
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Error retrieving vehicle',
+      error: error.message,
+    });
+  }
+};
+
 // Get all vehicles with pagination
 const getVehicles = async (req, res) => {
   try {
@@ -440,6 +483,7 @@ const testEndpoint = async (req, res) => {
 export {
   uploadExcel,
   getVehicles,
+  getVehicleById,
   testEndpoint,
   createVehicles,
   updateVehicle,
