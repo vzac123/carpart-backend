@@ -9,6 +9,7 @@ import userRouter from './src/routes/userRoutes.js';
 import vehicleRoutes from './src/routes/vehicleRoutes.js'; // Make sure to import vehicleRoutes
 import contactRoutes from './src/routes/contactRoutes.js';
 import infoMasterRoutes from './src/routes/infoMasterRoutes.js';
+import authRoutes from './src/routes/authRoutes.js'; // Add this import
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -34,6 +35,7 @@ if (!fs.existsSync(uploadsDir)) {
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/contacts', contactRoutes);
 app.use('/api/info', infoMasterRoutes);
+app.use('/api/auth', authRoutes);
 
 const PORT = process.env.PORT || 6000;
 

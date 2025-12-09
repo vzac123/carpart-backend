@@ -1,63 +1,399 @@
-import userModel from '../models/user.js'; // Add .js extension
-import bcrypt from 'bcryptjs';
+import User from '../models/user.js';
 
-const hashPassword = async (password) => {
+// ✅ SIGNUP - Create new user account
+const signup = async (req, res) => {
   try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    return hashedPassword;
-  } catch (error) {
-    console.log(`Error hashing password: ${error}`);
-    throw error; // Re-throw the error to handle it in the calling function
-  }
-};
+    console.log('👤 User signup request');
 
-const createUser = async (req, res) => {
-  try {
-    const userBody = req.body;
+    const { name, email, phoneNumber, password } = req.body;
 
-    // Validate request body
-    if (!userBody.password) {
-      return res
-        .status(400)
-        .json({ message: 'Password is required' });
-    }
-
-    userBody.password = await hashPassword(userBody.password);
-    console.log('User data:', userBody);
-
-    const db = await userModel.create(userBody);
-    console.log('Database response:', db);
-
-    res.status(201).json({
-      message: 'User Created Successfully',
-      user: db,
-    });
-  } catch (error) {
-    console.log('Error creating user:', error);
-
-    // Handle duplicate key errors (MongoDB)
-    if (error.code === 11000) {
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      console.log('❌ User already exists:', email);
       return res.status(400).json({
-        message: 'User already exists with this email or username',
+        success: false,
+        message: 'User with this email already exists',
       });
     }
 
+    // Create new user
+    const user = new User({
+      name,
+      email,
+      phoneNumber,
+      password,
+    });
+
+    await user.save();
+
+    // Store user info in session (without password)
+    // req.session.userId = user._id;
+    // req.session.user = {
+    //   id: user._id,
+    //   name: user.name,
+    //   email: user.email,
+    //   role: user.role,
+    // };
+
+    // console.log(`✅ User created: ${user._id}`);
+
+    res.status(201).json({
+      success: true,
+      message: 'Account created successfully',
+      user: user.toJSON(),
+    });
+  } catch (error) {
+    console.error('❌ Signup error:', error);
+
     // Handle validation errors
     if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(
+        (err) => err.message
+      );
       return res.status(400).json({
+        success: false,
         message: 'Validation error',
-        errors: error.errors,
+        errors,
+      });
+    }
+
+    // Handle duplicate key error (unique email)
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email already registered',
       });
     }
 
     res.status(500).json({
-      message: 'Internal server error',
+      success: false,
+      message: 'Error creating account',
       error: error.message,
     });
   }
 };
 
+// ✅ LOGIN - Authenticate user
+const login = async (req, res) => {
+  try {
+    console.log('🔐 User login request');
 
+    const { email, password } = req.body;
 
-// Or export as default (choose one)
-export default { createUser };
+    // Find user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      console.log('❌ User not found:', email);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password',
+      });
+    }
+
+    // Check if user is active
+    if (!user.isActive) {
+      console.log('❌ User account is inactive:', email);
+      return res.status(401).json({
+        success: false,
+        message:
+          'Account is deactivated. Please contact administrator.',
+      });
+    }
+
+    // Check password
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      console.log('❌ Invalid password for:', email);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password',
+      });
+    }
+
+    // Store user info in session
+    req.session.userId = user._id;
+    req.session.user = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
+
+    console.log(`✅ User logged in: ${user._id}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Login successful',
+      user: user.toJSON(),
+    });
+  } catch (error) {
+    console.error('❌ Login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error during login',
+      error: error.message,
+    });
+  }
+};
+
+// ✅ LOGOUT - Clear user session
+const logout = async (req, res) => {
+  try {
+    console.log('🚪 User logout request');
+
+    // Destroy session
+    req.session.destroy((err) => {
+      if (err) {
+        console.error('❌ Session destruction error:', err);
+        return res.status(500).json({
+          success: false,
+          message: 'Error during logout',
+        });
+      }
+
+      // Clear session cookie
+      res.clearCookie('connect.sid');
+
+      console.log('✅ User logged out successfully');
+      res.status(200).json({
+        success: true,
+        message: 'Logged out successfully',
+      });
+    });
+  } catch (error) {
+    console.error('❌ Logout error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error during logout',
+      error: error.message,
+    });
+  }
+};
+
+// ✅ GET CURRENT USER - Get logged in user info
+const getCurrentUser = async (req, res) => {
+  try {
+    console.log('👤 Get current user request');
+
+    if (!req.session.userId) {
+      console.log('❌ No user session found');
+      return res.status(401).json({
+        success: false,
+        message: 'Not authenticated',
+      });
+    }
+
+    const user = await User.findById(req.session.userId).select(
+      '-password -__v'
+    );
+
+    if (!user) {
+      console.log('❌ User not found in database');
+      // Clear invalid session
+      req.session.destroy();
+      return res.status(401).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    console.log('✅ Current user retrieved:', user._id);
+
+    res.status(200).json({
+      success: true,
+      message: 'User retrieved successfully',
+      user,
+    });
+  } catch (error) {
+    console.error('❌ Get current user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error retrieving user',
+      error: error.message,
+    });
+  }
+};
+
+// ✅ CHECK AUTH - Check if user is authenticated
+const checkAuth = async (req, res) => {
+  try {
+    console.log('🔍 Check authentication');
+
+    if (!req.session.userId) {
+      return res.status(200).json({
+        success: true,
+        isAuthenticated: false,
+        message: 'Not authenticated',
+      });
+    }
+
+    // Verify user still exists in database
+    const user = await User.findById(req.session.userId).select(
+      '_id name email role'
+    );
+
+    if (!user) {
+      // Clear invalid session
+      req.session.destroy();
+      return res.status(200).json({
+        success: true,
+        isAuthenticated: false,
+        message: 'Session expired',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      isAuthenticated: true,
+      message: 'User is authenticated',
+      user,
+    });
+  } catch (error) {
+    console.error('❌ Check auth error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error checking authentication',
+      error: error.message,
+    });
+  }
+};
+
+// ✅ UPDATE PROFILE - Update user profile
+const updateProfile = async (req, res) => {
+  try {
+    console.log('✏️ Update profile request');
+
+    if (!req.session.userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Not authenticated',
+      });
+    }
+
+    const user = await User.findById(req.session.userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    // Update fields (don't allow email/password update here - separate endpoints)
+    const { name, phoneNumber } = req.body;
+
+    if (name !== undefined) user.name = name;
+    if (phoneNumber !== undefined) user.phoneNumber = phoneNumber;
+
+    await user.save();
+
+    // Update session info
+    req.session.user.name = user.name;
+
+    console.log(`✅ Profile updated: ${user._id}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      user: user.toJSON(),
+    });
+  } catch (error) {
+    console.error('❌ Update profile error:', error);
+
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(
+        (err) => err.message
+      );
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors,
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Error updating profile',
+      error: error.message,
+    });
+  }
+};
+
+// ✅ CHANGE PASSWORD - Change user password
+const changePassword = async (req, res) => {
+  try {
+    console.log('🔑 Change password request');
+
+    if (!req.session.userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Not authenticated',
+      });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password and new password are required',
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 6 characters',
+      });
+    }
+
+    const user = await User.findById(req.session.userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    // Verify current password
+    const isPasswordValid = await user.comparePassword(
+      currentPassword
+    );
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect',
+      });
+    }
+
+    // Update password
+    user.password = newPassword;
+    await user.save();
+
+    console.log(`✅ Password changed for user: ${user._id}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Password changed successfully',
+    });
+  } catch (error) {
+    console.error('❌ Change password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error changing password',
+      error: error.message,
+    });
+  }
+};
+
+export {
+  signup,
+  login,
+  logout,
+  getCurrentUser,
+  checkAuth,
+  updateProfile,
+  changePassword,
+};
