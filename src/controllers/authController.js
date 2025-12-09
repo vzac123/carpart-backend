@@ -111,16 +111,16 @@ const login = async (req, res) => {
       });
     }
 
-    // Store user info in session
-    req.session.userId = user._id;
-    req.session.user = {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    };
+    // // Store user info in session
+    // req.session.userId = user._id;
+    // req.session.user = {
+    //   id: user._id,
+    //   name: user.name,
+    //   email: user.email,
+    //   role: user.role,
+    // };
 
-    console.log(`✅ User logged in: ${user._id}`);
+    // console.log(`✅ User logged in: ${user._id}`);
 
     res.status(200).json({
       success: true,
