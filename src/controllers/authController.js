@@ -111,7 +111,7 @@ const login = async (req, res) => {
       });
     }
 
-    // // Store user info in session
+    // Store user info in session
     // req.session.userId = user._id;
     // req.session.user = {
     //   id: user._id,
@@ -119,7 +119,6 @@ const login = async (req, res) => {
     //   email: user.email,
     //   role: user.role,
     // };
-
     // console.log(`✅ User logged in: ${user._id}`);
 
     res.status(200).json({
@@ -137,32 +136,46 @@ const login = async (req, res) => {
   }
 };
 
-// ✅ LOGOUT - Clear user session
 const logout = async (req, res) => {
   try {
     console.log('🚪 User logout request');
 
-    // Destroy session
-    req.session.destroy((err) => {
-      if (err) {
-        console.error('❌ Session destruction error:', err);
-        return res.status(500).json({
-          success: false,
-          message: 'Error during logout',
-        });
-      }
+    const { userId } = req.params;
 
-      // Clear session cookie
-      res.clearCookie('connect.sid');
-
-      console.log('✅ User logged out successfully');
-      res.status(200).json({
-        success: true,
-        message: 'Logged out successfully',
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required',
       });
+    }
+
+    // Check if user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      console.log('❌ User not found for logout:', userId);
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    console.log(`✅ User logout requested for: ${userId}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Logout requested successfully',
+      userId: userId,
     });
   } catch (error) {
     console.error('❌ Logout error:', error);
+
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user ID format',
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: 'Error during logout',

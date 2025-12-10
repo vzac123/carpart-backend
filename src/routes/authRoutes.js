@@ -17,9 +17,10 @@ router.post('/login', login); // Login to account
 router.get('/check', checkAuth); // Check authentication status
 
 // Protected routes (require authentication)
-router.post('/logout', logout); // Logout
+// router.post('/logout:userId', logout); // Logout
 router.get('/me', getCurrentUser); // Get current user
 router.put('/profile', updateProfile); // Update profile
 router.put('/change-password', changePassword); // Change password
+router.post('/logout/:userId', logout); // Logout specific user by ID;
 
 export default router;
