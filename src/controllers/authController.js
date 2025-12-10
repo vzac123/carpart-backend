@@ -13,7 +13,7 @@ const signup = async (req, res) => {
       console.log('❌ User already exists:', email);
       return res.status(400).json({
         success: false,
-        message: 'User with this email already exists',
+        message: 'User with this email already exists'
       });
     }
 
@@ -22,39 +22,31 @@ const signup = async (req, res) => {
       name,
       email,
       phoneNumber,
-      password,
+      password
     });
 
     await user.save();
 
-    // Store user info in session (without password)
-    // req.session.userId = user._id;
-    // req.session.user = {
-    //   id: user._id,
-    //   name: user.name,
-    //   email: user.email,
-    //   role: user.role,
-    // };
+    // Get user details without password
+    const userDetails = user.toJSON();
 
-    // console.log(`✅ User created: ${user._id}`);
+    console.log(`✅ User created: ${user._id}`);
 
     res.status(201).json({
       success: true,
       message: 'Account created successfully',
-      user: user.toJSON(),
+      user: userDetails
     });
   } catch (error) {
     console.error('❌ Signup error:', error);
-
+    
     // Handle validation errors
     if (error.name === 'ValidationError') {
-      const errors = Object.values(error.errors).map(
-        (err) => err.message
-      );
+      const errors = Object.values(error.errors).map(err => err.message);
       return res.status(400).json({
         success: false,
         message: 'Validation error',
-        errors,
+        errors
       });
     }
 
@@ -62,14 +54,14 @@ const signup = async (req, res) => {
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
-        message: 'Email already registered',
+        message: 'Email already registered'
       });
     }
 
     res.status(500).json({
       success: false,
       message: 'Error creating account',
-      error: error.message,
+      error: error.message
     });
   }
 };
@@ -92,14 +84,13 @@ const login = async (req, res) => {
     }
 
     // Check if user is active
-    if (!user.isActive) {
-      console.log('❌ User account is inactive:', email);
-      return res.status(401).json({
-        success: false,
-        message:
-          'Account is deactivated. Please contact administrator.',
-      });
-    }
+    // if (!user.isActive) {
+    //   console.log('❌ User account is inactive:', email);
+    //   return res.status(401).json({
+    //     success: false,
+    //     message: 'Account is deactivated. Please contact administrator.'
+    //   });
+    // }
 
     // Check password
     const isPasswordValid = await user.comparePassword(password);
@@ -111,20 +102,15 @@ const login = async (req, res) => {
       });
     }
 
-    // Store user info in session
-    // req.session.userId = user._id;
-    // req.session.user = {
-    //   id: user._id,
-    //   name: user.name,
-    //   email: user.email,
-    //   role: user.role,
-    // };
-    // console.log(`✅ User logged in: ${user._id}`);
+    // Get user details without password
+    const userDetails = user.toJSON();
+
+    console.log(`✅ User logged in: ${user._id}`);
 
     res.status(200).json({
       success: true,
       message: 'Login successful',
-      user: user.toJSON(),
+      user: userDetails,
     });
   } catch (error) {
     console.error('❌ Login error:', error);
